@@ -3,7 +3,7 @@ package edu.kingsu.SoftwareEngineering.Chess;
 /**
  * Tell me about this class
  *
- * @author Who are you?
+ * @author Alain Descartes Uwishema
  * @version 1.2.3.4.5
  */
 public class Main {
