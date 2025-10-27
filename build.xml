@@ -15,6 +15,10 @@
   <property name="test.dir" location="test" />
   <property name="report.dir" location="report" />
 
+  <!-- Project-specific app directories -->
+  <property name="backend.dir" location="${src.dir}/edu/kingsu/SoftwareEngineering/Chess_backend"/>
+  <property name="frontend.dir" location="${src.dir}/edu/kingsu/SoftwareEngineering/chess_game_frontEnd"/>
+
 
   <property name="Main-Class" value="edu.kingsu.SoftwareEngineering.Chess.Main"/>
   <property name="jar.name" value="${ant.project.name}"/>
@@ -111,13 +115,13 @@
   <target name="clean-tests">
     <delete dir="${test.classes.dir}"/>
   </target>
-  
+
   <target name="compile-test" depends="compile">
     <javac srcdir="${test.dir}" destdir="${test.classes.dir}" verbose="${verbose.output}" includeantruntime="false" debug="on">
       <classpath refid="classpath.test"/>
     </javac>
   </target>
-  
+
   <target name="run-tests" depends="compile-test">
     <junit printsummary="no" haltonfailure="no">
       <classpath refid="classpath.test" />
@@ -147,6 +151,42 @@
       <fileset dir="${report.dir}" includes="TEST*.xml"/>
     </delete>
 
+  </target>
+
+  <!-- Run Spring Boot backend (tries Maven wrapper, Maven, Gradle wrapper, then Gradle).
+       Spawns so it keeps running while the frontend starts. -->
+  <target name="run-backend" description="Run Spring Boot backend from ${backend.dir}">
+    <echo>Starting Spring Boot backend in ${backend.dir}</echo>
+    <!-- Unix/macOS -->
+    <exec dir="${backend.dir}" executable="sh" osfamily="unix" spawn="true">
+      <arg value="-c"/>
+      <arg value="([ -x ./mvnw ] &amp;&amp; ./mvnw spring-boot:run) || (command -v mvn &gt;/dev/null &amp;&amp; mvn spring-boot:run) || ([ -x ./gradlew ] &amp;&amp; ./gradlew bootRun) || (command -v gradle &gt;/dev/null &amp;&amp; gradle bootRun)"/>
+    </exec>
+    <!-- Windows -->
+    <exec dir="${backend.dir}" executable="cmd" osfamily="windows" spawn="true">
+      <arg value="/c"/>
+      <arg value="IF EXIST mvnw.cmd (mvnw.cmd spring-boot:run) ELSE IF EXIST gradlew.bat (gradlew.bat bootRun) ELSE mvn spring-boot:run"/>
+    </exec>
+  </target>
+
+  <!-- Run Next.js frontend in dev mode. Runs in foreground so you see logs. -->
+  <target name="run-frontend" description="Run Next.js dev server (npm run dev) in ${frontend.dir}">
+    <echo>Starting Next.js dev server in ${frontend.dir}</echo>
+    <!-- Unix/macOS -->
+    <exec dir="${frontend.dir}" executable="sh" osfamily="unix">
+      <arg value="-c"/>
+      <arg value="npm run dev"/>
+    </exec>
+    <!-- Windows -->
+    <exec dir="${frontend.dir}" executable="cmd" osfamily="windows">
+      <arg value="/c"/>
+      <arg value="npm run dev"/>
+    </exec>
+  </target>
+
+  <!-- Start backend (spawned) then run the frontend (foreground). -->
+  <target name="run-dev" depends="run-backend" description="Start backend then run Next.js dev server">
+    <antcall target="run-frontend"/>
   </target>
 
 </project>
