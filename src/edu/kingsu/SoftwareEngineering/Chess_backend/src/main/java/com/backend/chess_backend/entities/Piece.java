@@ -2,10 +2,6 @@
 
 package com.backend.chess_backend.entities;
 
-public enum Piece {
-    KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
-}
-
 import java.util.*;
 
 /**
@@ -30,11 +26,11 @@ public abstract class Piece {
 	*/
 	private int value;
 	/**
-	 *The column location of the chess piece in reference to the board. {1,2,3,4,5,6,7,8}  --> Board sees this as {0,1,2,3,4,5,6,7}. spans across the board.
+	 *The column location of the chess piece in reference to the board. {1,2,3,4,5,6,7,8}  The board sees this as {0,1,2,3,4,5,6,7}. spans across the board.
 	*/
 	private int xLoc;
 	/**
-	 *The row location of the chess piece in reference to the board. {A,B,C,D,E,F,G,H}  --> Board sees this as {0,1,2,3,4,5,6,7}. spans up/down the board.
+	 *The row location of the chess piece in reference to the board. {A,B,C,D,E,F,G,H}  The board sees this as {0,1,2,3,4,5,6,7}. spans up/down the board.
 	*/
 	private int yLoc;
 	/**
@@ -69,7 +65,7 @@ public abstract class Piece {
 	 <p>
 	 *It is the standard move the piece can make.  eg. diagonal, L, etc.
 	*/
-	public void standardMove();
+	public abstract void standardMove();
 	
 		// * SHARED *
 	/**
@@ -84,18 +80,22 @@ public abstract class Piece {
 	/**
 	 * Removes the last movement entry from the list.
 	 <p>
-	 * The allows the player to undo their past move and make another attempt --> record updated here, handled elsewhere.
+	 * The allows the player to undo their past move and make another attempt.
+	 <p>
+	 * Records are updated here, logic handled elsewhere.
 	*/
 	public void reverseMovement(){
 		// To be written
 	}
 	/**
-	 * Resets and recalulates the individual chess pieces legal moves list.   
+	 * Resets and recalulates the individual chess pieces legal moves list.  
+	 * @return currentLegalMoves Updates the legal moves list.
 	*/
-	public void updateLegalMoves(){
-		list.clear();
+	public List<int[]>  updateLegalMoves(){
+		currentLegalMoves.clear();
 		// Will add later (with Legal Moves);
 		//currentLegalMoves.add(new int[]{x, y};
+		return currentLegalMoves;
 	}
 	// ===== GETTERS & SETTERS =====
 	/**
