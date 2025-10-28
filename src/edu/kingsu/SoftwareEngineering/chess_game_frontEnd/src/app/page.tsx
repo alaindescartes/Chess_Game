@@ -1,23 +1,3 @@
-// "use client";
-// import Board, { type Piece } from "@/_components/Board";
-
-// export default function Home() {
-//   const handleSquareClick = (square: string, piece: Piece | null) => {
-//     console.log(
-//       "[Board] Clicked square:",
-//       square,
-//       "piece:",
-//       piece ?? "(empty)"
-//     );
-//   };
-
-//   return (
-//     <div>
-//       <Board onSquareClick={handleSquareClick} />
-//     </div>
-//   );
-// }
-
 "use client";
 import Board, { type Piece, type Position } from "@/_components/Board";
 import React from "react";
