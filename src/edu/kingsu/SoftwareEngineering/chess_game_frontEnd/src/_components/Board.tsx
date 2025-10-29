@@ -297,6 +297,12 @@ function Board({
                 setFromSel(null);
                 setToSel(null);
               } else {
+                if (piece && selectedPiece && piece[0] === selectedPiece[0]) {
+                  setFromSel(sq);
+                  setToSel(null);
+                  onSquareClick?.(sq, piece);
+                  return;
+                }
                 setToSel(sq);
                 onMoveIntent?.(fromSel, sq);
               }
