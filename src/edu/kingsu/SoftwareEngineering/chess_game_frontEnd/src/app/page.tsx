@@ -1,7 +1,7 @@
 "use client";
 import Board, { type Piece, type Position } from "@/_components/Board";
 import FullscreenSkeleton from "@/_components/LoadingScreen";
-import useCreateNewGame from "@/hooks/useCreateNewGame";
+import { useGameContext } from "@/context/GameContext";
 import React from "react";
 
 export default function Home() {
@@ -9,19 +9,18 @@ export default function Home() {
   const [selected, setSelected] = React.useState<string | null>(null);
   const [lastMove, setLastMove] = React.useState<[string, string] | null>(null);
   const [saving, setSaving] = React.useState(false);
-
-  const { data, isLoading, error } = useCreateNewGame();
+  const { game, isLoading } = useGameContext();
 
   React.useEffect(() => {
-    if (data?.position) {
-      setPosition(data.position as Position);
+    if (game?.position) {
+      setPosition(game.position);
       setLastMove(
-        data.lastFrom && data.lastTo
-          ? ([data.lastFrom, data.lastTo] as [string, string])
+        game.lastFrom && game.lastTo
+          ? ([game.lastFrom, game.lastTo] as [string, string])
           : null
       );
     }
-  }, [data]);
+  }, [game]);
 
   const showSkeleton = isLoading || !position;
 
