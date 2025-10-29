@@ -3,13 +3,14 @@ import Board, { type Piece, type Position } from "@/_components/Board";
 import FullscreenSkeleton from "@/_components/LoadingScreen";
 import { useGameContext } from "@/context/GameContext";
 import React from "react";
+import useMakeMove from "@/hooks/useMakeMove";
 
 export default function Home() {
   const [position, setPosition] = React.useState<Position>();
   const [selected, setSelected] = React.useState<string | null>(null);
   const [lastMove, setLastMove] = React.useState<[string, string] | null>(null);
-  const [saving, setSaving] = React.useState(false);
-  const { game, isLoading } = useGameContext();
+  const { game, isLoading, setGame } = useGameContext();
+  const { sendMove, isLoading: moveLoading } = useMakeMove(game.gameId);
 
   React.useEffect(() => {
     if (game?.position) {
@@ -25,7 +26,7 @@ export default function Home() {
   const showSkeleton = isLoading || !position;
 
   const handleSquareClick = async (square: string, piece: Piece | null) => {
-    if (saving) return;
+    if (moveLoading) return;
 
     if (!selected) {
       if (piece) setSelected(square);
@@ -37,16 +38,25 @@ export default function Home() {
       return;
     }
 
-    setSaving(true);
-    const from = selected;
+    const from = selected as string;
     const to = square;
     try {
-      //const next = await saveMoveToServer(from, to, position);
-      //setPosition(next);
-      setLastMove([from, to]);
+      const next = await sendMove({
+        from,
+        to,
+        clientRev: game.rev,
+        promotion: null,
+      });
+
+      setGame(next);
+      setPosition(next.position);
+      setLastMove(
+        next.lastFrom && next.lastTo
+          ? ([next.lastFrom, next.lastTo] as [string, string])
+          : null
+      );
     } finally {
       setSelected(null);
-      setSaving(false);
     }
   };
 
@@ -63,7 +73,7 @@ export default function Home() {
           />
         )}
       </div>
-      {saving && (
+      {moveLoading && (
         <div className="saving-overlay" aria-live="polite" aria-busy="true">
           <div className="spinner" />
         </div>
@@ -90,7 +100,7 @@ export default function Home() {
       >
         {isLoading
           ? "Loading game…"
-          : saving
+          : moveLoading
           ? "Saving move…"
           : selected
           ? `Selected: ${selected} — click a target`
