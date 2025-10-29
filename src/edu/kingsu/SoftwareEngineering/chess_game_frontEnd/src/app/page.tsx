@@ -1,59 +1,29 @@
 "use client";
 import Board, { type Piece, type Position } from "@/_components/Board";
+import FullscreenSkeleton from "@/_components/LoadingScreen";
+import useCreateNewGame from "@/hooks/useCreateNewGame";
 import React from "react";
 
-// Minimal helper: starting position (copied locally so parent owns the state)
-function initialPosition(): Position {
-  const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
-  const pos: Position = {};
-  for (let i = 0; i < 8; i++) {
-    pos[`${FILES[i]}2`] = "wP";
-    pos[`${FILES[i]}7`] = "bP";
-  }
-  pos["a1"] = "wR";
-  pos["h1"] = "wR";
-  pos["a8"] = "bR";
-  pos["h8"] = "bR";
-  pos["b1"] = "wN";
-  pos["g1"] = "wN";
-  pos["b8"] = "bN";
-  pos["g8"] = "bN";
-  pos["c1"] = "wB";
-  pos["f1"] = "wB";
-  pos["c8"] = "bB";
-  pos["f8"] = "bB";
-  pos["d1"] = "wQ";
-  pos["d8"] = "bQ";
-  pos["e1"] = "wK";
-  pos["e8"] = "bK";
-  return pos;
-}
-
-function saveMoveToServer(
-  from: string,
-  to: string,
-  position: Position
-): Promise<Position> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const next: Position = { ...position };
-      const moving = next[from];
-      if (!moving) {
-        resolve(position);
-        return;
-      }
-      delete next[from];
-      next[to] = moving;
-      resolve(next);
-    }, 650);
-  });
-}
-
 export default function Home() {
-  const [position, setPosition] = React.useState<Position>(initialPosition);
+  const [position, setPosition] = React.useState<Position>();
   const [selected, setSelected] = React.useState<string | null>(null);
   const [lastMove, setLastMove] = React.useState<[string, string] | null>(null);
   const [saving, setSaving] = React.useState(false);
+
+  const { data, isLoading, error } = useCreateNewGame();
+
+  React.useEffect(() => {
+    if (data?.position) {
+      setPosition(data.position as Position);
+      setLastMove(
+        data.lastFrom && data.lastTo
+          ? ([data.lastFrom, data.lastTo] as [string, string])
+          : null
+      );
+    }
+  }, [data]);
+
+  const showSkeleton = isLoading || !position;
 
   const handleSquareClick = async (square: string, piece: Piece | null) => {
     if (saving) return;
@@ -72,8 +42,8 @@ export default function Home() {
     const from = selected;
     const to = square;
     try {
-      const next = await saveMoveToServer(from, to, position);
-      setPosition(next);
+      //const next = await saveMoveToServer(from, to, position);
+      //setPosition(next);
       setLastMove([from, to]);
     } finally {
       setSelected(null);
@@ -83,12 +53,27 @@ export default function Home() {
 
   return (
     <div>
-      <Board
-        position={position}
-        selected={selected}
-        lastMove={lastMove}
-        onSquareClick={handleSquareClick}
-      />
+      {showSkeleton && <FullscreenSkeleton />}
+      <div style={{ position: "relative", display: "inline-block" }}>
+        {!showSkeleton && (
+          <Board
+            position={position}
+            selected={selected}
+            lastMove={lastMove}
+            onSquareClick={handleSquareClick}
+          />
+        )}
+      </div>
+      {saving && (
+        <div className="saving-overlay" aria-live="polite" aria-busy="true">
+          <div className="spinner" />
+        </div>
+      )}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .saving-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(1px); }
+        .spinner { width: 42px; height: 42px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.35); border-top-color: #2563eb; animation: spin 0.9s linear infinite; }
+      `}</style>
 
       <div
         style={{
@@ -104,7 +89,9 @@ export default function Home() {
         }}
         aria-live="polite"
       >
-        {saving
+        {isLoading
+          ? "Loading game…"
+          : saving
           ? "Saving move…"
           : selected
           ? `Selected: ${selected} — click a target`

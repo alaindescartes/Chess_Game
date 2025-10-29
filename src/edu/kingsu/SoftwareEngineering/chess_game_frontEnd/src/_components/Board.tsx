@@ -18,6 +18,36 @@ export type Piece =
 
 export type Position = Record<string, Piece>;
 
+// Accept either strict Position or a looser server-shaped map (Record<string, string>)
+export type PositionLike = Position | Record<string, string> | undefined;
+
+function isPiece(code: string): code is Piece {
+  return (
+    code === "wK" ||
+    code === "wQ" ||
+    code === "wR" ||
+    code === "wB" ||
+    code === "wN" ||
+    code === "wP" ||
+    code === "bK" ||
+    code === "bQ" ||
+    code === "bR" ||
+    code === "bB" ||
+    code === "bN" ||
+    code === "bP"
+  );
+}
+
+/** Normalize any incoming server payload into a strict Position map */
+function toPosition(input: PositionLike): Position {
+  if (!input) return initialPosition();
+  const out: Position = {};
+  for (const [sq, val] of Object.entries(input)) {
+    if (typeof val === "string" && isPiece(val)) out[sq] = val;
+  }
+  return out;
+}
+
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
@@ -70,7 +100,7 @@ export interface BoardProps {
   /** Which side is at the bottom */
   orientation?: "white" | "black";
   /** Board position as a map of algebraic square -> piece code */
-  position?: Position;
+  position?: Position | Record<string, string>;
   /** Currently selected square (e.g., "e4") */
   selected?: string | null;
   /** Squares to visually highlight (legal moves, hints, etc.) */
@@ -87,6 +117,8 @@ export interface BoardProps {
   ) => void;
   /** Custom renderer for pieces (to swap emojis for images/SVG) */
   renderPiece?: (piece: Piece, square: string) => React.ReactNode;
+  /** Optional callback fired once both source and destination are chosen */
+  onMoveIntent?: (from: string, to: string) => void;
 }
 
 function Board({
@@ -100,8 +132,23 @@ function Board({
   onSquareClick,
   onSquareRightClick,
   renderPiece,
+  onMoveIntent,
 }: BoardProps) {
-  const pos: Position = position ?? initialPosition();
+  const [fromSel, setFromSel] = React.useState<string | null>(selected ?? null);
+  const [toSel, setToSel] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setFromSel(selected ?? null);
+    setToSel(null);
+  }, [selected]);
+  const sel = fromSel;
+
+  const pos: Position = React.useMemo(() => toPosition(position), [position]);
+
+  const selectedPiece: Piece | null = React.useMemo(
+    () => (sel ? (pos[sel] as Piece | undefined) ?? null : null),
+    [sel, pos]
+  );
 
   const squares = React.useMemo(() => {
     const files = orientation === "white" ? FILES : [...FILES].reverse();
@@ -165,6 +212,13 @@ function Board({
   return (
     <div style={wrapperStyle}>
       <style>{`
+        .hl-ring-blue { position:absolute; inset:4px; border-radius:6px; border:3px solid #2b6cb0; background: rgba(59,130,246,0.15); pointer-events:none; z-index:3; }
+        .hl-ring-gold { position:absolute; inset:4px; border-radius:6px; border:3px solid rgba(255,215,0,0.95); background: transparent; pointer-events:none; z-index:2; }
+        .hl-ring-last { position:absolute; inset:6px; border-radius:6px; border:3px solid rgba(0,0,0,0.35); background: transparent; pointer-events:none; z-index:1; }
+        .hl-dot { position:absolute; top:50%; left:50%; width:28%; height:28%; transform:translate(-50%,-50%); border-radius:50%; background: rgba(16,185,129,0.85); box-shadow: 0 0 0 2px rgba(0,0,0,0.08) inset; pointer-events:none; z-index:4; }
+        .hl-ring { position:absolute; inset:12%; border-radius:50%; border:6px solid rgba(220,38,38,0.9); background: transparent; pointer-events:none; z-index:4; }
+      `}</style>
+      <style>{`
         .chess-piece { display:inline-block; transition: transform 120ms ease, filter 120ms ease, opacity 120ms ease; will-change: transform; transform-origin: center bottom; animation: breathe 7s ease-in-out infinite; }
         .chess-piece:hover { transform: translateY(-3%) scale(1.06); filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
         @keyframes breathe { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-1.5%) } }
@@ -180,8 +234,17 @@ function Board({
           const isDark = (fileIdx + rankIdx) % 2 === 0; // a1 is dark
           const piece = (pos[sq] as Piece | undefined) ?? null;
 
-          const isSelected = selected === sq;
-          const isHighlighted = highlights.includes(sq);
+          const isFrom = fromSel === sq;
+          const isTo = toSel === sq;
+
+          const isCandidate = !!fromSel && highlights.includes(sq);
+          const isCapture =
+            isCandidate &&
+            !!piece &&
+            !!selectedPiece &&
+            piece[0] !== selectedPiece[0];
+
+          const isSelected = sel === sq;
           const isLastMove = !!(
             lastMove &&
             (lastMove[0] === sq || lastMove[1] === sq)
@@ -190,13 +253,7 @@ function Board({
           const squareStyle: React.CSSProperties = {
             ...squareBase,
             background: isDark ? "#b58863" : "#f0d9b5",
-            outline: isSelected
-              ? "3px solid #2b6cb0"
-              : isHighlighted
-              ? "3px solid rgba(255, 215, 0, 0.95)"
-              : isLastMove
-              ? "3px solid rgba(0,0,0,0.35)"
-              : "1px solid rgba(0,0,0,0.08)",
+            border: "1px solid rgba(0,0,0,0.08)",
             cursor: onSquareClick || piece ? "pointer" : "default",
             fontSize: "calc(min(6vh, 6vw))",
           };
@@ -225,7 +282,40 @@ function Board({
             background: labelBg,
           };
 
-          const handleClick = () => onSquareClick?.(sq, piece);
+          const handleClick = () => {
+            if (!fromSel) {
+              if (piece) {
+                setFromSel(sq);
+                setToSel(null);
+              }
+              onSquareClick?.(sq, piece);
+              return;
+            }
+
+            if (fromSel && !toSel) {
+              if (sq === fromSel) {
+                setFromSel(null);
+                setToSel(null);
+              } else {
+                setToSel(sq);
+                onMoveIntent?.(fromSel, sq);
+              }
+              onSquareClick?.(sq, piece);
+              return;
+            }
+
+            if (sq === fromSel) {
+              setFromSel(null);
+              setToSel(null);
+            } else if (piece) {
+              setFromSel(sq);
+              setToSel(null);
+            } else {
+              setToSel(sq);
+              onMoveIntent?.(fromSel, sq);
+            }
+            onSquareClick?.(sq, piece);
+          };
           const handleContext = (e: React.MouseEvent) => {
             e.preventDefault();
             onSquareRightClick?.(sq, piece, e);
@@ -240,13 +330,22 @@ function Board({
               onClick={handleClick}
               onContextMenu={handleContext}
             >
+              {isLastMove && <span className="hl-ring-last" />}
+              {isFrom && <span className="hl-ring-blue" />}
+              {isTo && <span className="hl-ring-gold" />}
+              {isCandidate && !isCapture && <span className="hl-dot" />}
+              {isCandidate && isCapture && <span className="hl-ring" />}
+
               {piece && (
-                <div className="chess-piece" aria-label={`${piece} on ${sq}`}>
+                <div
+                  className="chess-piece"
+                  aria-label={`${piece} on ${sq}`}
+                  style={{ position: "relative", zIndex: 2 }}
+                >
                   {renderPiece ? renderPiece(piece, sq) : PIECE_TO_CHAR[piece]}
                 </div>
               )}
 
-              {/* File labels: bottom-right & top-left to avoid overlap */}
               {isBottomEdge && (
                 <span style={{ ...labelChip, right: 4, bottom: 2 }}>
                   {file}
@@ -256,7 +355,6 @@ function Board({
                 <span style={{ ...labelChip, left: 4, top: 2 }}>{file}</span>
               )}
 
-              {/* Rank labels: bottom-left & top-right to avoid overlap */}
               {isLeftEdge && (
                 <span style={{ ...labelChip, left: 4, bottom: 2 }}>{rank}</span>
               )}
