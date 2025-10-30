@@ -1,17 +1,20 @@
 package com.backend.chess_backend.services;
 
+import java.util.NoSuchElementException;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.backend.chess_backend.domain.Board;
 import com.backend.chess_backend.domain.BoardSetups;
 import com.backend.chess_backend.domain.BoardViews;
 import com.backend.chess_backend.domain.PieceColor;
 import com.backend.chess_backend.web.GameStateDto;
 import com.backend.chess_backend.web.MoveRequest;
-import org.springframework.stereotype.Service;
-
-import java.util.NoSuchElementException;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 /**
@@ -79,8 +82,8 @@ public class GameService {
     public GameStateDto makeMove(String id, MoveRequest req) {
         Game g = games.get(id);
         if (g == null) throw new NoSuchElementException("Game not found: " + id);
+        validateBasicMove(g, req);
 
-        // Minimal: parse squares, move (no legality checks yet)
         int from = Board.sq(req.from());
         int to   = Board.sq(req.to());
         g.board.move(from, to);
@@ -91,6 +94,74 @@ public class GameService {
         g.turn = (g.turn == PieceColor.WHITE) ? PieceColor.BLACK : PieceColor.WHITE;
 
         return g.toDto();
+    }
+
+    /**
+     * Perform lightweight, pre-mutation validation for a proposed move.
+     * <p>
+     * Checks the following in order:
+     * <ul>
+     *   <li><b>Optimistic concurrency</b>: {@code req.clientRev == g.rev}; otherwise 409 CONFLICT.</li>
+     *   <li><b>Square format</b>: {@code from}/{@code to} are algebraic squares in {@code a1..h8} (lowercase); otherwise 422 UNPROCESSABLE_ENTITY.</li>
+     *   <li><b>Non-no-op</b>: {@code from} and {@code to} must differ; otherwise 422 UNPROCESSABLE_ENTITY.</li>
+     *   <li><b>Presence & turn</b>: a piece exists on {@code from} and its color matches {@code g.turn}; otherwise 422 UNPROCESSABLE_ENTITY.</li>
+     *   <li><b>Destination occupancy</b>: {@code to} must not contain a friendly piece; otherwise 422 UNPROCESSABLE_ENTITY.</li>
+     * </ul>
+     * This method does <em>not</em> enforce full chess legality (piece movement, path blocking,
+     * check/castling/en passant/promotion); that belongs in the rules engine.
+     * </p>
+     *
+     * @param g   current game aggregate (authoritative state)
+     * @param req inbound move request (from/to/promotion/clientRev)
+     * @throws org.springframework.web.server.ResponseStatusException
+     *         if any validation fails (409 for stale revision; 422 for illegal inputs/conditions)
+     */
+    private void validateBasicMove(Game g, MoveRequest req) {
+    
+        if (req.clientRev() == null || !req.clientRev().equals(g.rev)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Client revision is stale; refresh and retry.");
+        }
+
+        // Squares
+        if (!isSquare(req.from()) || !isSquare(req.to())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Squares must be in a1..h8.");
+        }
+        if (req.from().equals(req.to())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Destination cannot equal source.");
+        }
+
+        // Pieces & turn
+        String fromCode = BoardViews.toPositionMap(g.board).get(req.from());
+        if (fromCode == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "No piece on source square.");
+        }
+        char side = (g.turn == PieceColor.WHITE) ? 'w' : 'b';
+        if (fromCode.charAt(0) != side) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "It's not your turn to move that piece.");
+        }
+
+        // Friendly-occupied destination
+        String toCode = BoardViews.toPositionMap(g.board).get(req.to());
+        if (toCode != null && toCode.charAt(0) == fromCode.charAt(0)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Cannot move onto a friendly piece.");
+        }
+
+    }
+
+    /**
+     * Determine whether the given string is a valid algebraic square label.
+     * <p>
+     * Accepts only lowercase file letters {@code a..h} and rank digits {@code 1..8},
+     * e.g., {@code "e4"}. Uppercase (e.g., {@code "E4"}) is considered invalid by this check.
+     * </p>
+     *
+     * @param s candidate string
+     * @return {@code true} if {@code s} is in the range {@code a1..h8}; otherwise {@code false}
+     */
+    private boolean isSquare(String s) {
+        return s != null && s.length() == 2 &&
+                s.charAt(0) >= 'a' && s.charAt(0) <= 'h' &&
+                s.charAt(1) >= '1' && s.charAt(1) <= '8';
     }
 
     /* ---- tiny in-memory Game aggregate ---- */

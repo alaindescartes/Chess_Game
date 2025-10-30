@@ -4,6 +4,7 @@ import FullscreenSkeleton from "@/_components/LoadingScreen";
 import { useGameContext } from "@/context/GameContext";
 import React from "react";
 import useMakeMove from "@/hooks/useMakeMove";
+import GameInfo from "@/_components/GameInfo";
 
 export default function Home() {
   const [position, setPosition] = React.useState<Position>();
@@ -63,15 +64,20 @@ export default function Home() {
   return (
     <div>
       {showSkeleton && <FullscreenSkeleton />}
-      <div style={{ position: "relative", display: "inline-block" }}>
-        {!showSkeleton && (
-          <Board
-            position={position}
-            selected={selected}
-            lastMove={lastMove}
-            onSquareClick={handleSquareClick}
-          />
-        )}
+      <div className="game-shell">
+        <div className="board-wrap">
+          {!showSkeleton && (
+            <Board
+              position={position}
+              selected={selected}
+              lastMove={lastMove}
+              onSquareClick={handleSquareClick}
+            />
+          )}
+        </div>
+        <aside className="info-panel">
+          <GameInfo />
+        </aside>
       </div>
       {moveLoading && (
         <div className="saving-overlay" aria-live="polite" aria-busy="true">
@@ -82,6 +88,13 @@ export default function Home() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .saving-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(1px); }
         .spinner { width: 42px; height: 42px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.35); border-top-color: #2563eb; animation: spin 0.9s linear infinite; }
+
+        .game-shell { display: flex; align-items: flex-start; gap: 16px; }
+        .board-wrap { position: relative; display: inline-block; }
+        .info-panel { min-width: 260px; max-width: 320px; padding: 8px 12px; border-radius: 10px; background: rgba(0,0,0,0.04); }
+        @media (prefers-color-scheme: dark) { .info-panel { background: rgba(255,255,255,0.06); } }
+        @media (max-width: 900px) { .game-shell { flex-direction: column; } .info-panel { width: 100%; max-width: none; }
+        }
       `}</style>
 
       <div

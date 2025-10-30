@@ -1,9 +1,15 @@
 package com.backend.chess_backend.controllers;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.backend.chess_backend.services.GameService;
 import com.backend.chess_backend.web.GameStateDto;
 import com.backend.chess_backend.web.MoveRequest;
-import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller exposing endpoints for managing in-memory chess games.

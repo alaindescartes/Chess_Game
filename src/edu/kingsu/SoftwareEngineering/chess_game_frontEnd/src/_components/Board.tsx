@@ -2,6 +2,14 @@
 import React from "react";
 
 // --- Types & helpers --------------------------------------------------------
+/**
+ * Two-character piece codes used by the app:
+ * - Leading char: 'w' or 'b' (white / black side)
+ * - Trailing char: 'K', 'Q', 'R', 'B', 'N', 'P' (King..Pawn)
+ *
+ * These codes are shared by the backend API and the UI. The board omits
+ * empty squares entirely from its {@link Position} map to keep payloads small.
+ */
 export type Piece =
   | "wK"
   | "wQ"
@@ -16,11 +24,20 @@ export type Piece =
   | "bN"
   | "bP";
 
+/**
+ * Mapping from algebraic square (e.g., "e4") to a {@link Piece} code (e.g., "wN").
+ * Only occupied squares are present; empty squares are omitted.
+ */
 export type Position = Record<string, Piece>;
 
 // Accept either strict Position or a looser server-shaped map (Record<string, string>)
+/**
+ * Looser server-shaped map accepted by the component. Any non-piece values are
+ * filtered out by {@link toPosition} before rendering.
+ */
 export type PositionLike = Position | Record<string, string> | undefined;
 
+/** Type guard ensuring an arbitrary string is a valid {@link Piece} code. */
 function isPiece(code: string): code is Piece {
   return (
     code === "wK" ||
@@ -38,7 +55,10 @@ function isPiece(code: string): code is Piece {
   );
 }
 
-/** Normalize any incoming server payload into a strict Position map */
+/**
+ * Normalize any incoming payload into a strict {@link Position} by copying only
+ * recognized {@link Piece} codes. Unknown keys/values are ignored.
+ */
 function toPosition(input: PositionLike): Position {
   if (!input) return initialPosition();
   const out: Position = {};
@@ -48,9 +68,15 @@ function toPosition(input: PositionLike): Position {
   return out;
 }
 
+/** File (a..h) and rank (1..8) labels used for square generation and edges. */
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
+/**
+ * Legacy unicode glyph mapping for pieces. Currently the default renderer uses
+ * colored tokens with a letter mark (see `.piece-token`), but this mapping is
+ * kept for potential emoji/SVG renderers.
+ */
 const PIECE_TO_CHAR: Record<Piece, string> = {
   wK: "\u2654",
   wQ: "\u2655",
@@ -66,6 +92,10 @@ const PIECE_TO_CHAR: Record<Piece, string> = {
   bP: "\u265F",
 };
 
+/**
+ * Build the canonical starting position (client-side fallback/testing only).
+ * The server is still authoritative for real games.
+ */
 function initialPosition(): Position {
   const pos: Position = {};
   for (let i = 0; i < 8; i++) {
@@ -92,6 +122,21 @@ function initialPosition(): Position {
 }
 
 // --- Component API ----------------------------------------------------------
+/**
+ * Props for the {@link Board} component.
+ *
+ * @property size        Pixel number (e.g., 512) or CSS size string (e.g., "100%").
+ * @property fullScreen  If true, the board keeps a perfect square that fits the viewport.
+ * @property orientation Which side sits at the bottom ("white" | "black").
+ * @property position    Position map (algebraic square -> piece code). Empties omitted.
+ * @property selected    Currently selected source square, or null.
+ * @property highlights  Squares to visually hint as candidate targets.
+ * @property lastMove    Two-square tuple to outline the last move (from, to).
+ * @property onSquareClick     Primary click handler for a square.
+ * @property onSquareRightClick Context menu/right-click handler for a square.
+ * @property renderPiece Custom renderer for a piece; overrides the default token.
+ * @property onMoveIntent Fired when a source and a destination have been chosen.
+ */
 export interface BoardProps {
   /** Pixel number (e.g., 512) or CSS size string (e.g., "100%") */
   size?: number | string;
@@ -121,6 +166,19 @@ export interface BoardProps {
   onMoveIntent?: (from: string, to: string) => void;
 }
 
+/**
+ * Chessboard UI component that renders an 8×8 grid, pieces, and interaction chrome
+ * (selection rings, last-move outline, candidate dots, etc.).
+ *
+ * Interaction model:
+ *  - First click selects a source square that contains a piece.
+ *  - Second click selects a destination and triggers {@link BoardProps.onMoveIntent}.
+ *  - Clicking a friendly-occupied destination re-selects that piece as the new source.
+ *  - Clicking the same source again clears the selection.
+ *
+ * This component is presentational and does **not** perform full rule validation;
+ * the backend remains authoritative.
+ */
 function Board({
   size = 512,
   fullScreen = true,
@@ -211,6 +269,7 @@ function Board({
 
   return (
     <div style={wrapperStyle}>
+      {/* Colored token renderer for clear white/black distinction */}
       <style>{`
         .hl-ring-blue { position:absolute; inset:4px; border-radius:6px; border:3px solid #2b6cb0; background: rgba(59,130,246,0.15); pointer-events:none; z-index:3; }
         .hl-ring-gold { position:absolute; inset:4px; border-radius:6px; border:3px solid rgba(255,215,0,0.95); background: transparent; pointer-events:none; z-index:2; }
@@ -223,6 +282,33 @@ function Board({
         .chess-piece:hover { transform: translateY(-3%) scale(1.06); filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
         @keyframes breathe { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-1.5%) } }
         @media (prefers-reduced-motion: reduce) { .chess-piece, .chess-piece:hover { animation: none !important; transition: none !important; transform: none !important; } }
+      `}</style>
+      <style>{`
+        .piece-token {
+          width: 78%;
+          height: 78%;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: calc(min(4.8vh, 4.8vw));
+          letter-spacing: .02em;
+          box-shadow: 0 6px 12px rgba(0,0,0,.25), inset 0 0 0 2px rgba(0,0,0,.15);
+          user-select: none;
+        }
+        .pt-white {
+          background: radial-gradient(ellipse at 30% 30%, #ffffff, #e5e7eb 60%, #cbd5e1 100%);
+          color: #111827;
+        }
+        .pt-black {
+          background: radial-gradient(ellipse at 30% 30%, #111827, #0b1220 60%, #000000 100%);
+          color: #f8fafc;
+          box-shadow: 0 6px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.08);
+        }
+        @media (prefers-color-scheme: dark) {
+          .pt-white { color: #0b1220; }
+        }
       `}</style>
 
       <div style={boardStyle} role="grid" aria-label="Chessboard">
@@ -348,7 +434,17 @@ function Board({
                   aria-label={`${piece} on ${sq}`}
                   style={{ position: "relative", zIndex: 2 }}
                 >
-                  {renderPiece ? renderPiece(piece, sq) : PIECE_TO_CHAR[piece]}
+                  {renderPiece ? (
+                    renderPiece(piece, sq)
+                  ) : (
+                    <div
+                      className={`piece-token ${
+                        piece[0] === "w" ? "pt-white" : "pt-black"
+                      }`}
+                    >
+                      {piece[1]}
+                    </div>
+                  )}
                 </div>
               )}
 
