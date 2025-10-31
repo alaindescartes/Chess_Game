@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.backend.chess_backend.exception.IllegalActivity;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -124,26 +125,26 @@ public class GameService {
 
         // Squares
         if (!isSquare(req.from()) || !isSquare(req.to())) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Squares must be in a1..h8.");
+            throw new IllegalActivity( "Squares must be in a1..h8.");
         }
         if (req.from().equals(req.to())) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Destination cannot equal source.");
+            throw new IllegalActivity( "Destination cannot equal source.");
         }
 
         // Pieces & turn
         String fromCode = BoardViews.toPositionMap(g.board).get(req.from());
         if (fromCode == null) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "No piece on source square.");
+            throw new IllegalActivity(  "No piece on source square.");
         }
         char side = (g.turn == PieceColor.WHITE) ? 'w' : 'b';
         if (fromCode.charAt(0) != side) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "It's not your turn to move that piece.");
+            throw new IllegalActivity( "It's not your turn to move that piece.");
         }
 
         // Friendly-occupied destination
         String toCode = BoardViews.toPositionMap(g.board).get(req.to());
         if (toCode != null && toCode.charAt(0) == fromCode.charAt(0)) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Cannot move onto a friendly piece.");
+            throw new IllegalActivity( "Cannot move onto a friendly piece.");
         }
 
     }
