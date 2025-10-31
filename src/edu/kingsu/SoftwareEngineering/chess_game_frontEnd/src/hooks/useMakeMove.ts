@@ -52,7 +52,7 @@ function useMakeMove(gameId: string) {
             `HTTP ${res.status}`;
 
           setError(msg);
-          toast(error, { style: { backgroundColor: "red", color: "white" } });
+          toast(msg, { style: { backgroundColor: "red", color: "white" } });
           throw new Error(String(msg));
         }
 
