@@ -13,7 +13,7 @@ export interface initialGameState {
 function useCreateNewGame() {
   const URL = "http://localhost:8080/api/game";
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<String | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<initialGameState | null>(null);
 
   const getInitialBoardDetails = async () => {
