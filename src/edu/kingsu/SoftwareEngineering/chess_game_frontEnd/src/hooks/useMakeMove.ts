@@ -1,5 +1,6 @@
 import React from "react";
 import type { GameState } from "@/context/GameContext";
+import { toast } from "sonner";
 
 export interface MovePayload {
   from: string;
@@ -49,6 +50,9 @@ function useMakeMove(gameId: string) {
               typeof json === "object" &&
               (json.message || json.error)) ||
             `HTTP ${res.status}`;
+
+          setError(msg);
+          toast(error, { style: { backgroundColor: "red", color: "white" } });
           throw new Error(String(msg));
         }
 
