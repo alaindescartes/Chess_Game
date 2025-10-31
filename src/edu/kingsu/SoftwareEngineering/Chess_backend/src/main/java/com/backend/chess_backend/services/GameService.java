@@ -106,7 +106,7 @@ public class GameService {
      *   <li><b>Square format</b>: {@code from}/{@code to} are algebraic squares in {@code a1..h8} (lowercase); otherwise 422 UNPROCESSABLE_ENTITY.</li>
      *   <li><b>Non-no-op</b>: {@code from} and {@code to} must differ; otherwise 422 UNPROCESSABLE_ENTITY.</li>
      *   <li><b>Presence & turn</b>: a piece exists on {@code from} and its color matches {@code g.turn}; otherwise 422 UNPROCESSABLE_ENTITY.</li>
-     *   <li><b>Destination occupancy</b>: {@code to} must not contain a friendly piece; otherwise 422 UNPROCESSABLE_ENTITY.</li>
+     *   <li><b>Destination occupancy</b>: {@code to} must be empty (captures disabled in this phase); otherwise 422 UNPROCESSABLE_ENTITY.</li>
      * </ul>
      * This method does <em>not</em> enforce full chess legality (piece movement, path blocking,
      * check/castling/en passant/promotion); that belongs in the rules engine.
@@ -141,10 +141,10 @@ public class GameService {
             throw new IllegalActivity( "It's not your turn to move that piece.");
         }
 
-        // Friendly-occupied destination
+        // Destination must be empty 
         String toCode = BoardViews.toPositionMap(g.board).get(req.to());
-        if (toCode != null && toCode.charAt(0) == fromCode.charAt(0)) {
-            throw new IllegalActivity( "Cannot move onto a friendly piece.");
+        if (toCode != null) {
+            throw new IllegalActivity("Destination square must be empty.");
         }
 
     }
