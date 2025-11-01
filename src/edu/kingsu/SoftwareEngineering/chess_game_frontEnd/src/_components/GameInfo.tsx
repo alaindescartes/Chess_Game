@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-  GameState,
-  getSavedIds,
-  savedId,
-  useGameContext,
+    GameState,
+    getSavedIds,
+    savedId,
+    useGameContext,
 } from "@/context/GameContext";
 import useCreateNewGame from "@/hooks/useCreateNewGame";
 import { toast } from "sonner";
@@ -37,35 +37,33 @@ function statusBadgeClass(status: string | undefined) {
 function GameInfo() {
   const { game, isLoading, setGame } = useGameContext();
   const {
-    data,
-    isLoading: gameLoading,
-    error: newGameError,
+      isLoading: gameLoading,
+      create,
   } = useCreateNewGame();
   const [gameIds, setGameIds] = useState<savedId[]>([]);
   const [tempSavedId, setTempSavedId] = useState("");
   const {
     data: savedGame,
-    isLoading: isResuming,
-    error: resumeError,
+      error: resumeError,
   } = useGetSavedGame(tempSavedId);
 
   const turnSide = game.turn === "WHITE" ? "white" : "black";
   const turnLabel = game.turn === "WHITE" ? "White to move" : "Black to move";
   const lastMove =
     game.lastFrom && game.lastTo ? `${game.lastFrom} → ${game.lastTo}` : "—";
-  const statusLabel = game.status?.replace(/_/g, " ") || "IN PROGRESS";
+  const statusLabel = String(game.status ?? "IN_PROGRESS").replace(/_/g, " ");
 
-  const handleCreateNewGame = () => {
-    if (data) setGame(data as GameState);
-    if (newGameError) {
-      toast("There was a problem when creating new Game", {
-        style: { backgroundColor: "red", color: "white" },
+  const handleCreateNewGame = async () => {
+    try {
+      const fresh = await create();
+      setGame(fresh as GameState);
+      toast("New game has been started, enjoy.", {
+        style: { backgroundColor: "green", color: "white" },
       });
-      return;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e?.message : "There was a problem when creating new Game";
+      toast(msg, { style: { backgroundColor: "red", color: "white" } });
     }
-    toast("New game has been started, enjoy.", {
-      style: { backgroundColor: "green", color: "white" },
-    });
   };
 
   const handleResume = (id: string) => {
@@ -95,14 +93,13 @@ function GameInfo() {
     }
   }, [resumeError]);
 
-  useEffect(() => {
-    const ids = getSavedIds();
-    setGameIds(ids);
-  }, []);
+    useEffect(() => {
+        setGameIds(getSavedIds());
+    }, [game.gameId]);
 
   return (
     <div
-      className="w-full h-full min-h-dvh box-border p-3.5 rounded-xl bg-linear-to-br from-sky-500/20 to-violet-500/20 backdrop-saturate-150 text-sm leading-tight"
+      className="w-full h-full min-h-dvh box-border p-3.5 rounded-xl bg-gradient-to-br from-sky-500/20 to-violet-500/20 backdrop-saturate-150 text-sm leading-tight"
       aria-busy={isLoading}
     >
       <div className="flex items-center justify-between mb-2.5">
@@ -153,16 +150,16 @@ function GameInfo() {
           Captured (dummy data)
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             wP×2
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             bN
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             wB
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             bP
           </span>
         </div>
@@ -172,7 +169,7 @@ function GameInfo() {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <button
-              className="px-3 py-2 rounded-lg bg-linear-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-3 py-2 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={gameLoading}
               title={
                 gameLoading ? "Creating a new game..." : "Start a new game"
@@ -187,7 +184,10 @@ function GameInfo() {
                 Are you absolutely sure?
               </AlertDialogTitle>
               <AlertDialogDescription className="text-sm text-slate-600 dark:text-slate-300">
-                Starting a new game will:
+                Starting a new game will affect your current session. Review the
+                changes below.
+              </AlertDialogDescription>
+              <div className="text-sm text-slate-600 dark:text-slate-300">
                 <ul className="list-disc pl-5 space-y-1 mt-2">
                   <li>
                     Create a fresh board in the standard starting position
@@ -199,16 +199,18 @@ function GameInfo() {
                   </li>
                   <li>Clear any pending piece selections on the board.</li>
                 </ul>
-                This action cannot be undone from this dialog. A new game will
-                receive a new ID.
-              </AlertDialogDescription>
+                <p className="mt-2">
+                  This action cannot be undone from this dialog. A new game will
+                  receive a new ID.
+                </p>
+              </div>
             </AlertDialogHeader>
             <AlertDialogFooter className="gap-2">
               <AlertDialogCancel className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition">
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
-                className="px-3 py-2 rounded-lg bg-linear-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-3 py-2 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={gameLoading}
                 onClick={handleCreateNewGame}
               >
@@ -217,14 +219,6 @@ function GameInfo() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        <button
-          className="px-3 py-2 rounded-lg bg-linear-to-br from-cyan-500 to-violet-500 text-white font-bold tracking-wide cursor-not-allowed opacity-90"
-          disabled
-          title="Coming soon"
-        >
-          Resync
-        </button>
       </div>
       <section className="mt-4">
         <div className="flex items-center justify-between mb-2">
@@ -261,7 +255,7 @@ function GameInfo() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleResume(o.id)}
-                    className="px-2.5 py-1.5 rounded-md bg-linear-to-br from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow hover:shadow-md active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                    className="px-2.5 py-1.5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow hover:shadow-md active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
                     title="Copy ID"
                   >
                     play

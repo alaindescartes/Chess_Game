@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import useCreateNewGame from "@/hooks/useCreateNewGame";
-import { toast } from "sonner";
 
 export type Piece =
   | "wK"
@@ -85,9 +84,6 @@ export const handleGameIdSave = (gameId: string) => {
     id: gameId,
   };
   savedGameIdStore.push(idObj);
-  // toast("Current game id saved successfully", {
-  //   style: { backgroundColor: "green", color: "white" },
-  // });
 };
 
 export const getSavedIds = (): savedId[] => {
@@ -113,7 +109,6 @@ export default function GameContextProvider({
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
-// Convenience hook for consumers
 export function useGameContext() {
   return React.useContext(GameContext);
 }

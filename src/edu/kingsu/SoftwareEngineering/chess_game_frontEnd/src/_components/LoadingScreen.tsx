@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 const FullscreenSkeleton: React.FC = () => {
   const squares = useMemo(() => Array.from({ length: 64 }, (_, i) => i), []);

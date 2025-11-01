@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 export interface initialGameState {
   gameId: string;
   rev: number;
-  position: Record<string, string>; // e.g. { a1: 'wR', b1: 'wN', ... }
+  position: Record<string, string>; 
   turn: "WHITE" | "BLACK";
   status: "IN_PROGRESS" | "CHECKMATE" | "STALEMATE" | string;
   lastFrom: string | null;
@@ -17,7 +17,7 @@ function useCreateNewGame() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<initialGameState | null>(null);
 
-  const getInitialBoardDetails = async () => {
+  const getInitialBoardDetails = async (): Promise<initialGameState> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -33,27 +33,30 @@ function useCreateNewGame() {
           (json && typeof json === "object" && (json.message || json.error)) ||
           "Could not get initial game setup";
         setError(message);
-        return;
+        throw new Error(String(message));
       }
 
-      handleGameIdSave((json as initialGameState).gameId ?? "");
-      setData(json as initialGameState);
+      const created = json as initialGameState;
+      handleGameIdSave(created.gameId ?? "");
+      setData(created);
+      return created;
     } catch (e: unknown) {
       const message =
         e instanceof Error
           ? e.message
           : "Something went wrong while getting initial board setup";
       setError(message);
+      throw e instanceof Error ? e : new Error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    getInitialBoardDetails();
+    getInitialBoardDetails().then();
   }, []);
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, create: getInitialBoardDetails };
 }
 
 export default useCreateNewGame;

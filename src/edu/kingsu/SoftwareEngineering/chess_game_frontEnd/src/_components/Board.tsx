@@ -5,7 +5,7 @@ import React from "react";
 /**
  * Two-character piece codes used by the app:
  * - Leading char: 'w' or 'b' (white / black side)
- * - Trailing char: 'K', 'Q', 'R', 'B', 'N', 'P' (King..Pawn)
+ * - Trailing char: 'K', 'Q', 'R', 'B', 'N', 'P' (King…Pawn)
  *
  * These codes are shared by the backend API and the UI. The board omits
  * empty squares entirely from its {@link Position} map to keep payloads small.
@@ -71,27 +71,6 @@ function toPosition(input: PositionLike): Position {
 /** File (a..h) and rank (1..8) labels used for square generation and edges. */
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-
-/**
- * Legacy unicode glyph mapping for pieces. Currently the default renderer uses
- * colored tokens with a letter mark (see `.piece-token`), but this mapping is
- * kept for potential emoji/SVG renderers.
- */
-const PIECE_TO_CHAR: Record<Piece, string> = {
-  wK: "\u2654",
-  wQ: "\u2655",
-  wR: "\u2656",
-  wB: "\u2657",
-  wN: "\u2658",
-  wP: "\u2659",
-  bK: "\u265A",
-  bQ: "\u265B",
-  bR: "\u265C",
-  bB: "\u265D",
-  bN: "\u265E",
-  bP: "\u265F",
-};
-
 /**
  * Build the canonical starting position (client-side fallback/testing only).
  * The server is still authoritative for real games.
@@ -329,9 +308,7 @@ function Board({
             !!piece &&
             !!selectedPiece &&
             piece[0] !== selectedPiece[0];
-
-          const isSelected = sel === sq;
-          const isLastMove = !!(
+            const isLastMove = !!(
             lastMove &&
             (lastMove[0] === sq || lastMove[1] === sq)
           );
