@@ -1,5 +1,10 @@
-import React from "react";
-import { GameState, useGameContext } from "@/context/GameContext";
+import React, { useEffect, useState } from "react";
+import {
+  GameState,
+  getSavedIds,
+  savedId,
+  useGameContext,
+} from "@/context/GameContext";
 import useCreateNewGame from "@/hooks/useCreateNewGame";
 import { toast } from "sonner";
 import {
@@ -13,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import useGetSavedGame from "@/hooks/useGetSavedGame";
 
 function statusBadgeClass(status: string | undefined) {
   const key = (status || "IN_PROGRESS").toLowerCase();
@@ -35,6 +41,13 @@ function GameInfo() {
     isLoading: gameLoading,
     error: newGameError,
   } = useCreateNewGame();
+  const [gameIds, setGameIds] = useState<savedId[]>([]);
+  const [tempSavedId, setTempSavedId] = useState("");
+  const {
+    data: savedGame,
+    isLoading: isResuming,
+    error: resumeError,
+  } = useGetSavedGame(tempSavedId);
 
   const turnSide = game.turn === "WHITE" ? "white" : "black";
   const turnLabel = game.turn === "WHITE" ? "White to move" : "Black to move";
@@ -54,6 +67,38 @@ function GameInfo() {
       style: { backgroundColor: "green", color: "white" },
     });
   };
+
+  const handleResume = (id: string) => {
+    if (id === game.gameId) {
+      toast("game is currently loaded");
+    }
+    setTempSavedId(id);
+  };
+
+  useEffect(() => {
+    if (savedGame) {
+      setGame(savedGame as GameState);
+      toast("Game loaded.", {
+        style: { backgroundColor: "#10b981", color: "white" },
+      });
+    }
+  }, [savedGame, setGame]);
+
+  useEffect(() => {
+    if (resumeError) {
+      toast(
+        typeof resumeError === "string"
+          ? resumeError
+          : "Failed to load saved game",
+        { style: { backgroundColor: "#ef4444", color: "white" } }
+      );
+    }
+  }, [resumeError]);
+
+  useEffect(() => {
+    const ids = getSavedIds();
+    setGameIds(ids);
+  }, []);
 
   return (
     <div
@@ -181,6 +226,52 @@ function GameInfo() {
           Resync
         </button>
       </div>
+      <section className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-bold tracking-wide uppercase text-sky-600 dark:text-sky-400">
+            Saved Games
+          </h2>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {gameIds?.length ?? 0} total
+          </span>
+        </div>
+
+        {!gameIds || gameIds.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-4 text-sm text-slate-600 dark:text-slate-300">
+            No saved games yet. Start a new game to see it listed here.
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-xl overflow-hidden border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/60 backdrop-blur">
+            {gameIds.map((o, index) => (
+              <li
+                key={index}
+                className="flex items-center gap-3 p-3 hover:bg-sky-50/80 dark:hover:bg-slate-800/60 transition"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    {o.date}
+                  </div>
+                  <div
+                    className="text-sm font-mono truncate text-slate-900 dark:text-slate-100"
+                    title={o.id}
+                  >
+                    {o.id}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleResume(o.id)}
+                    className="px-2.5 py-1.5 rounded-md bg-linear-to-br from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow hover:shadow-md active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                    title="Copy ID"
+                  >
+                    play
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

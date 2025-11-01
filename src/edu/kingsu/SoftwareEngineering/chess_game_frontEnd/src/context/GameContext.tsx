@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import useCreateNewGame from "@/hooks/useCreateNewGame";
+import { toast } from "sonner";
 
 export type Piece =
   | "wK"
@@ -53,6 +54,45 @@ const defaultValue: GameContextValue = {
 };
 
 export const GameContext = React.createContext<GameContextValue>(defaultValue);
+
+export type savedId = {
+  date: string;
+  id: string;
+};
+export const savedGameIdStore: savedId[] = [];
+
+export const handleGameIdSave = (gameId: string) => {
+  if (gameId === "") {
+    return;
+  }
+  const idExistsInStore = savedGameIdStore.some(
+    (instoreGameId) => instoreGameId.id === gameId
+  );
+  if (idExistsInStore) {
+    throw new Error("id is already saved");
+  }
+  const now = new Date();
+  const formatted = now.toLocaleString("en-CA", {
+    timeZone: "America/Edmonton",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const idObj = {
+    date: formatted,
+    id: gameId,
+  };
+  savedGameIdStore.push(idObj);
+  // toast("Current game id saved successfully", {
+  //   style: { backgroundColor: "green", color: "white" },
+  // });
+};
+
+export const getSavedIds = (): savedId[] => {
+  return savedGameIdStore;
+};
 
 export default function GameContextProvider({
   children,

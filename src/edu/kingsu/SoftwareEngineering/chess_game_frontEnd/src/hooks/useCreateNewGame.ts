@@ -1,3 +1,4 @@
+import { handleGameIdSave } from "@/context/GameContext";
 import { useEffect, useState } from "react";
 
 export interface initialGameState {
@@ -19,18 +20,24 @@ function useCreateNewGame() {
   const getInitialBoardDetails = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+
       const res = await fetch(`${URL}`, {
         method: "POST",
-        headers: { "content-type": "Application/json" },
-        body: JSON.stringify(null),
+        headers: { Accept: "application/json" },
       });
 
       const json = await res.json();
       if (!res.ok) {
-        const message = "Could not get initial game setup";
+        const message =
+          (json && typeof json === "object" && (json.message || json.error)) ||
+          "Could not get initial game setup";
         setError(message);
+        return;
       }
-      setData(json);
+
+      handleGameIdSave((json as initialGameState).gameId ?? "");
+      setData(json as initialGameState);
     } catch (e: unknown) {
       const message =
         e instanceof Error
