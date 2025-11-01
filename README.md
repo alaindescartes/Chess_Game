@@ -1,72 +1,127 @@
-# Chess
-You will be working in a team environment on a large open-ended software project representing the development of a complex multifaceted GUI application.  In order to be successful in this software endeavour, your group must remain on track and stay focused throughout the semester.  This is no small task—do not let the project slip!
+# Chess – Development Guide
 
-## Compile
-To compile the project run:m
+A two-part project:
+- **Backend**: Java Spring Boot REST API for chess game state & move validation.
+- **Frontend**: Next.js/React UI for playing and inspecting games.
 
+---
+
+## Prerequisites
+- **Java 17 (JDK 17)**
+- **Maven Wrapper** (included): `./mvnw`
+- **Node.js 18+** and **npm**
+
+> The backend runs on **http://localhost:8080** and the frontend on **http://localhost:3000** by default.
+
+---
+
+## Project Structure
 ```
-ant compile
-```
-
-## Testing (JUnit)
-To test the model and generate a testing report run:
-
-```
-ant test
-```
-
-Then navigate to `report/html/index.html` with a web browser. 
-
-```
-open report/html/index.html
-```
-
-## Build a Distributable (JAR file)
-To build an executable jar file, run:
-
-```
-ant jar
+src/edu/kingsu/SoftwareEngineering/
+├─ Chess_backend/                # Spring Boot API
+└─ chess_game_frontEnd/         # Next.js frontend
 ```
 
+---
 
-## Running
+## Backend (Spring Boot)
 
-### Without Ant, Command line
-To run the application via the portable jar file (this is by default created at `dist/ImageViewer.jar` after building) run:
-
-```
-java -jar <jar file>
-```
-
-Example:
-
-```
-java -jar dist/ImageViewer.jar # This is the default jar location after build
-```
-### With Ant
-To run the application through `ant` (also performs application build if necessary), navigate
-to the root of this repository and run:
-
-```
-ant
+### Run (dev)
+```bash
+cd src/edu/kingsu/SoftwareEngineering/Chess_backend
+./mvnw spring-boot:run
 ```
 
-## JavaDoc
-To create the backend (API-level) documentation run:
 
+
+### REST API – Quick Reference
+**Base URL:** `http://localhost:8080`
+
+#### Create a new game
+```http
+POST /api/game
 ```
-ant javadoc
+Body: *(none)*  
+Response (example):
+```json
+{
+  "gameId": "68feaacf-cc22-4ea2-afef-325f38e58ca2",
+  "rev": 0,
+  "position": { "a2": "wP", "e2": "wP", "e7": "bP", "e1": "wK", "e8": "bK", "a1": "wR", "h8": "bR", "...": "..." },
+  "turn": "WHITE",
+  "status": "IN_PROGRESS",
+  "lastFrom": null,
+  "lastTo": null
+}
 ```
 
-Then navigate to `doc/index.html` with a web browser. 
+#### Get an existing game
+```http
+GET /api/game/{id}
+```
+Response: same shape as above.
 
+#### Make a move
+```http
+POST /api/game/{id}/move
+Content-Type: application/json
 ```
-open doc/index.html
+Body:
+```json
+{
+  "from": "e2",
+  "to": "e4",
+  "promotion": null,
+  "clientRev": 0
+}
+```
+Notes:
+- `from`/`to` are algebraic squares `a1..h8`.
+- `clientRev` **must equal** the current `rev` from the latest game snapshot (optimistic concurrency).
+- On invalid input or illegal moves you may receive:
+  - `409 CONFLICT` – stale `clientRev` (refresh your snapshot).
+  - `422 UNPROCESSABLE_ENTITY` – invalid squares, wrong turn, blocked path, etc.
+
+**cURL examples**
+```bash
+# Create game
+curl -s -X POST http://localhost:8080/api/game | jq
+
+# Get game
+curl -s http://localhost:8080/api/game/REPLACE_WITH_ID | jq
+
+# Make a move
+curl -s -X POST http://localhost:8080/api/game/REPLACE_WITH_ID/move \
+  -H 'Content-Type: application/json' \
+  -d '{"from":"e2","to":"e4","promotion":null,"clientRev":0}' | jq
 ```
 
-## Cleaning
-To clean created files from building, navigate to the root of this repository and run:
+---
 
+## Frontend (Next.js)
+```bash
+cd src/edu/kingsu/SoftwareEngineering/chess_game_frontEnd
+npm install
+npm run dev
 ```
-ant clean
-```
+Open **http://localhost:3000**.
+
+> The UI expects the backend at `http://localhost:8080`. If your API base URL differs, update the frontend hooks/services accordingly.
+
+---
+## Installing prerequisites
+
+If you don't already have the tools, here are reliable ways to install them:
+
+- **Node.js & npm**  
+  - Official downloads: https://nodejs.org  
+  - Recommended (macOS/Linux): **nvm** – https://github.com/nvm-sh/nvm  
+  - macOS (Homebrew): `brew install node`
+- **Maven**  
+  - Official guide: https://maven.apache.org/install.html  
+  - macOS (Homebrew): `brew install maven`
+- **Java 17 (Temurin/OpenJDK)**  
+  - Adoptium: https://adoptium.net  
+  - macOS (Homebrew): `brew install temurin@17`
+
+> Tip: After installing, verify with `node -v`, `npm -v`, `mvn -v`, and `java -version`.
