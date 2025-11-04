@@ -1,4 +1,4 @@
 build
 dist
 doc
-lib
+.DS_Store
