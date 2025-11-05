@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.util.List;
 
 import com.backend.chess_backend.services.GameService;
 import com.backend.chess_backend.web.GameStateDto;
@@ -89,5 +91,24 @@ public class GameController {
     @PostMapping("/{id}/move")
     public GameStateDto makeMove(@PathVariable String id, @RequestBody MoveRequest req) {
         return service.makeMove(id, req);
+    }
+
+    /**
+     * Returns pseudo-legal destination squares for the piece on {@code from}.
+     * <p>
+     * This is intended for frontend highlighting. It returns movement-pattern targets with
+     * board bounds and occupancy rules applied (captures allowed), but may not include
+     * king-safety constraints yet.
+     * </p>
+     *
+     * Example: <code>GET /api/game/{id}/targets?from=e2</code> → <code>["e3","e4"]</code>
+     *
+     * @param id   game identifier (UUID string)
+     * @param from source square in algebraic notation ("a1".."h8")
+     * @return list of algebraic squares that the selected piece can move to
+     */
+    @GetMapping("/{id}/targets")
+    public List<String> getTargets(@PathVariable String id, @RequestParam("from") String from) {
+        return service.getPseudoLegalTargets(id, from);
     }
 }
