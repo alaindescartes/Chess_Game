@@ -10,6 +10,7 @@ export default function Home() {
   const [position, setPosition] = React.useState<Position>();
   const [selected, setSelected] = React.useState<string | null>(null);
   const [lastMove, setLastMove] = React.useState<[string, string] | null>(null);
+  const [highlights, setHighlights] = React.useState<string[]>([]);
   const { game, isLoading, setGame } = useGameContext();
   const { sendMove, isLoading: moveLoading } = useMakeMove(game.gameId);
 
@@ -24,18 +25,42 @@ export default function Home() {
     }
   }, [game]);
 
+  const selectedPiece: Piece | null = React.useMemo(
+    () => (selected && position ? (position[selected] as Piece) ?? null : null),
+    [selected, position]
+  );
+
   const showSkeleton = isLoading || !position;
 
   const handleSquareClick = async (square: string, piece: Piece | null) => {
     if (moveLoading) return;
 
     if (!selected) {
-      if (piece) setSelected(square);
+      if (!piece) return;
+      setSelected(square);
+      try {
+        const targets = await fetchLegalmovesToHighlight(game.gameId, square);
+        setHighlights(targets);
+      } catch {
+        setHighlights([]);
+      }
       return;
     }
 
     if (square === selected) {
       setSelected(null);
+      setHighlights([]);
+      return;
+    }
+
+    if (piece && selectedPiece && piece[0] === selectedPiece[0]) {
+      setSelected(square);
+      try {
+        const targets = await fetchLegalmovesToHighlight(game.gameId, square);
+        setHighlights(targets);
+      } catch {
+        setHighlights([]);
+      }
       return;
     }
 
@@ -48,7 +73,6 @@ export default function Home() {
         clientRev: game.rev,
         promotion: null,
       });
-
       setGame(next);
       setPosition(next.position);
       setLastMove(
@@ -58,8 +82,23 @@ export default function Home() {
       );
     } finally {
       setSelected(null);
+      setHighlights([]);
     }
   };
+
+  async function fetchLegalmovesToHighlight(
+    gameId: string,
+    from: string
+  ): Promise<string[]> {
+    const res = await fetch(
+      `http://localhost:8080/api/game/${gameId}/targets?from=${from}`,
+      {
+        method: "GET",
+      }
+    );
+    if (!res.ok) throw new Error(`Targets fetch failed: ${res.status}`);
+    return res.json();
+  }
 
   return (
     <div>
@@ -70,6 +109,7 @@ export default function Home() {
             <Board
               position={position}
               selected={selected}
+              highlights={highlights}
               lastMove={lastMove}
               onSquareClick={handleSquareClick}
             />
@@ -116,7 +156,11 @@ export default function Home() {
           : moveLoading
           ? "Saving move…"
           : selected
-          ? `Selected: ${selected} — click a target`
+          ? highlights.length > 0
+            ? `Selected: ${selected} — ${highlights.length} target${
+                highlights.length === 1 ? "" : "s"
+              }`
+            : `Selected: ${selected}`
           : "Click a piece, then a target square"}
       </div>
     </div>

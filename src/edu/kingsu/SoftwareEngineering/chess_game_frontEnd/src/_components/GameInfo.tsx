@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-    GameState,
-    getSavedIds,
-    savedId,
-    useGameContext,
+  GameState,
+  getSavedIds,
+  savedId,
+  useGameContext,
 } from "@/context/GameContext";
 import useCreateNewGame from "@/hooks/useCreateNewGame";
 import { toast } from "sonner";
@@ -36,16 +36,10 @@ function statusBadgeClass(status: string | undefined) {
 
 function GameInfo() {
   const { game, isLoading, setGame } = useGameContext();
-  const {
-      isLoading: gameLoading,
-      create,
-  } = useCreateNewGame();
+  const { isLoading: gameLoading, create } = useCreateNewGame();
   const [gameIds, setGameIds] = useState<savedId[]>([]);
   const [tempSavedId, setTempSavedId] = useState("");
-  const {
-    data: savedGame,
-      error: resumeError,
-  } = useGetSavedGame(tempSavedId);
+  const { data: savedGame, error: resumeError } = useGetSavedGame(tempSavedId);
 
   const turnSide = game.turn === "WHITE" ? "white" : "black";
   const turnLabel = game.turn === "WHITE" ? "White to move" : "Black to move";
@@ -61,7 +55,10 @@ function GameInfo() {
         style: { backgroundColor: "green", color: "white" },
       });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e?.message : "There was a problem when creating new Game";
+      const msg =
+        e instanceof Error
+          ? e?.message
+          : "There was a problem when creating new Game";
       toast(msg, { style: { backgroundColor: "red", color: "white" } });
     }
   };
@@ -93,13 +90,13 @@ function GameInfo() {
     }
   }, [resumeError]);
 
-    useEffect(() => {
-        setGameIds(getSavedIds());
-    }, [game.gameId]);
+  useEffect(() => {
+    setGameIds(getSavedIds());
+  }, [game.gameId]);
 
   return (
     <div
-      className="w-full h-full min-h-dvh box-border p-3.5 rounded-xl bg-gradient-to-br from-sky-500/20 to-violet-500/20 backdrop-saturate-150 text-sm leading-tight"
+      className="w-full h-full min-h-dvh box-border p-3.5 rounded-xl bg-linear-to-br from-sky-500/20 to-violet-500/20 backdrop-saturate-150 text-sm leading-tight"
       aria-busy={isLoading}
     >
       <div className="flex items-center justify-between mb-2.5">
@@ -150,16 +147,16 @@ function GameInfo() {
           Captured (dummy data)
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             wP×2
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             bN
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             wB
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-linear-to-br from-emerald-500/30 to-blue-500/30 text-slate-900 dark:text-slate-100 font-bold">
             bP
           </span>
         </div>
@@ -169,7 +166,7 @@ function GameInfo() {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <button
-              className="px-3 py-2 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-3 py-2 rounded-lg bg-linear-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={gameLoading}
               title={
                 gameLoading ? "Creating a new game..." : "Start a new game"
@@ -210,7 +207,7 @@ function GameInfo() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
-                className="px-3 py-2 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-3 py-2 rounded-lg bg-linear-to-br from-cyan-500 to-violet-500 text-white font-semibold shadow-md hover:shadow-lg transition active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-violet-400/60 disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={gameLoading}
                 onClick={handleCreateNewGame}
               >
@@ -255,7 +252,7 @@ function GameInfo() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleResume(o.id)}
-                    className="px-2.5 py-1.5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow hover:shadow-md active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                    className="px-2.5 py-1.5 rounded-md bg-linear-to-br from-emerald-500 to-teal-500 text-white text-xs font-semibold shadow hover:shadow-md active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
                     title="Copy ID"
                   >
                     play
