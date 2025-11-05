@@ -1,4 +1,4 @@
-package com.backend.chess_backend.domain.d;
+package com.backend.chess_backend;
 
 import com.backend.chess_backend.domain.Board;
 import com.backend.chess_backend.domain.Piece;
