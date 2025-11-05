@@ -10,6 +10,7 @@ import React from "react";
  * These codes are shared by the backend API and the UI. The board omits
  * empty squares entirely from its {@link Position} map to keep payloads small.
  */
+
 export type Piece =
   | "wK"
   | "wQ"
@@ -23,6 +24,28 @@ export type Piece =
   | "bB"
   | "bN"
   | "bP";
+
+/**
+ * Unicode chess glyphs for each piece code.
+ * White: ♔♕♖♗♘♙  Black: ♚♛♜♝♞♟
+ */
+const GLYPHS: Record<Piece, string> = {
+  wK: "♔",
+  wQ: "♕",
+  wR: "♖",
+  wB: "♗",
+  wN: "♘",
+  wP: "♙",
+  bK: "♚",
+  bQ: "♛",
+  bR: "♜",
+  bB: "♝",
+  bN: "♞",
+  bP: "♟",
+};
+function glyphFor(piece: Piece): string {
+  return GLYPHS[piece];
+}
 
 /**
  * Mapping from algebraic square (e.g., "e4") to a {@link Piece} code (e.g., "wN").
@@ -271,11 +294,13 @@ function Board({
           align-items: center;
           justify-content: center;
           font-weight: 800;
-          font-size: calc(min(4.8vh, 4.8vw));
+          font-size: calc(min(5.4vh, 5.4vw));
+          line-height: 1;
           letter-spacing: .02em;
           box-shadow: 0 6px 12px rgba(0,0,0,.25), inset 0 0 0 2px rgba(0,0,0,.15);
           user-select: none;
         }
+        .piece-glyph { line-height: 1; display: inline-block; transform: translateY(-2%); }
         .pt-white {
           background: radial-gradient(ellipse at 30% 30%, #ffffff, #e5e7eb 60%, #cbd5e1 100%);
           color: #111827;
@@ -308,7 +333,7 @@ function Board({
             !!piece &&
             !!selectedPiece &&
             piece[0] !== selectedPiece[0];
-            const isLastMove = !!(
+          const isLastMove = !!(
             lastMove &&
             (lastMove[0] === sq || lastMove[1] === sq)
           );
@@ -419,7 +444,7 @@ function Board({
                         piece[0] === "w" ? "pt-white" : "pt-black"
                       }`}
                     >
-                      {piece[1]}
+                      <span className="piece-glyph">{glyphFor(piece)}</span>
                     </div>
                   )}
                 </div>
