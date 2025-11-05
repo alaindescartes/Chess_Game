@@ -101,6 +101,10 @@ public final class Board {
         }
         int file = algebraic.charAt(0) - 'a';   // 0..7
         int rank = algebraic.charAt(1) - '1';   // 0..7
+       
+        if (file < 0 || file >= 8 || rank < 0 || rank >= 8) {
+            throw new IllegalArgumentException("Algebraic must be within a1..h8, got: " + algebraic);
+        }
         int idx = (rank << 3) | file;
         validateSquare(idx);
         return idx;
