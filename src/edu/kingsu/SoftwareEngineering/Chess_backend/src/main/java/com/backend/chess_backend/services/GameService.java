@@ -4,6 +4,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.List;
 
 import com.backend.chess_backend.exception.IllegalActivity;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import com.backend.chess_backend.domain.BoardViews;
 import com.backend.chess_backend.domain.PieceColor;
 import com.backend.chess_backend.web.GameStateDto;
 import com.backend.chess_backend.web.MoveRequest;
+import com.backend.chess_backend.domain.rules.LegalMoves;
 
 @Service
 /**
@@ -39,6 +41,11 @@ import com.backend.chess_backend.web.MoveRequest;
  */
 public class GameService {
     private final ConcurrentMap<String, Game> games = new ConcurrentHashMap<>();
+    private final LegalMoves legalMoves;
+
+    public GameService(LegalMoves legalMoves) {
+        this.legalMoves = legalMoves;
+    }
 
     /**
      * Creates a new game with the standard chess starting position.
@@ -68,6 +75,27 @@ public class GameService {
     }
 
     /**
+     * Returns pseudo-legal targets for the piece on a given square, for UI highlighting.
+     * Pseudo-legal = movement pattern with bounds/occupancy; king-safety may be added later.
+     *
+     * @param id   game id
+     * @param from source square ("a1".."h8")
+     * @return list of algebraic destination squares (may be empty)
+     * @throws java.util.NoSuchElementException if the game does not exist
+     */
+    public List<String> getPseudoLegalTargets(String id, String from) {
+        Game g = games.get(id);
+        if (g == null) throw new NoSuchElementException("Game not found: " + id);
+        if (from == null || from.length() != 2) return java.util.List.of();
+        int idx = Board.sq(from);
+        var piece = g.board.getAt(idx);
+        if (piece == null) return java.util.List.of();
+        // Only highlight for the side to move
+        if (piece.getColor() != g.turn) return java.util.List.of();
+        return legalMoves.pseudoLegalTargets(g.board, from);
+    }
+
+    /**
      * Applies a naive move to the identified game. This method does not validate
      * chess rules (checks, pins, legal destinations, etc.). It parses algebraic
      * coordinates from the request, updates the board, bumps the revision, toggles
@@ -84,6 +112,11 @@ public class GameService {
         Game g = games.get(id);
         if (g == null) throw new NoSuchElementException("Game not found: " + id);
         validateBasicMove(g, req);
+
+        // Delegate full movement legality to the domain rules service
+        if (!legalMoves.isLegal(g.board, g.turn, req)) {
+            throw new IllegalActivity("Illegal move: violates piece movement or path rules.");
+        }
 
         int from = Board.sq(req.from());
         int to   = Board.sq(req.to());
@@ -118,7 +151,7 @@ public class GameService {
      *         if any validation fails (409 for stale revision; 422 for illegal inputs/conditions)
      */
     private void validateBasicMove(Game g, MoveRequest req) {
-    
+
         if (req.clientRev() == null || !req.clientRev().equals(g.rev)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Client revision is stale; refresh and retry.");
         }
@@ -141,10 +174,10 @@ public class GameService {
             throw new IllegalActivity( "It's not your turn to move that piece.");
         }
 
-        // Destination must be empty 
+        // Destination cannot be friendly-occupied (captures allowed)
         String toCode = BoardViews.toPositionMap(g.board).get(req.to());
-        if (toCode != null) {
-            throw new IllegalActivity("Destination square must be empty.");
+        if (toCode != null && toCode.charAt(0) == side) {
+            throw new IllegalActivity("Cannot move onto a friendly piece.");
         }
 
     }
