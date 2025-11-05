@@ -5,6 +5,8 @@ A two-part project:
 - **Backend**: Java Spring Boot REST API for chess game state & move validation.
 - **Frontend**: Next.js/React UI for playing and inspecting games.
 
+> **Gameplay:** Standard chess. An AI opponent (play vs computer) will be added in a future update.
+
 ---
 
 ## Prerequisites
@@ -158,6 +160,12 @@ npm run dev
 Open **http://localhost:3000**.
 
 > The UI expects the backend at `http://localhost:8080`. If your API base URL differs, update the frontend hooks/services accordingly.
+
+---
+
+## Roadmap
+
+- [ ] Add AI opponent (single-player vs computer)
 
 ---
 
